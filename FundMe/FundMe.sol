@@ -97,5 +97,4 @@ contract FundMe {
     receive() external payable{
         fund();
     }
-
 }
