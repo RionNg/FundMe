@@ -10,7 +10,8 @@ library PriceConverter {
     function getPrice() internal view returns(uint256) {
         // SepoliaETH / USD Address
         // https://docs.chain.link/data-feeds/price-feeds/addresses
-        AggregatorV3Interface priceFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
+        AggregatorV3Interface priceFeed
+            = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
         (, int256 answer, , , ) = priceFeed.latestRoundData();
         // ETH/USD rate in 18 digits
         return uint256(answer * 10000000000);    
