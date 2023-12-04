@@ -5,100 +5,83 @@
 
 
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.18;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {PriceConverter} from "./PriceConverter.sol";
 
-error NotOwner();
+error FundMe__NotOwner();
 
 contract FundMe {
-
     using PriceConverter for uint256;
 
     mapping(address => uint256) public addressToAmountFunded;
     address[] public funders;
 
-    // Could we make this constant? /* hint: No! We should make it immutable! */
+    // Could we make this constant?  /* hint: no! We should make it immutable! */
     address public /* immutable */ i_owner;
-    // 21,508 - immutable
-    // 23,644 - non-immutable
-    uint256 public constant MINIMUM_USD = 5e18; // 5 * 10 ** 18
-    // 21,415 gas - constant
-    // 23,515 gas - non-constant
-    // 21,415 * 141000000000 = $9.058545
-    // 23,515 * 141000000000 = $9.946845
-
-    constructor() {
+    uint256 public constant MINIMUM_USD = 5e18; // 5 * 10 ** 18;
+    AggregatorV3Interface private s_priceFeed;
+    
+    constructor(address priceFeed) {
         i_owner = msg.sender;
+        s_priceFeed = AggregatorV3Interface(priceFeed);
     }
 
     function fund() public payable {
         require(
-            msg.value.getConversionRate() >= MINIMUM_USD,
-            "Not enough ETH!"
+            msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD,
+            "You need to spend more ETH!"
         );
-        // required(PriceConverter.getConversionRate(msg.value) >= MINUMUM_USD, "Not enough ETH!");
+        // require(PriceConverter.getConversionRate(msg.value) >= MINIMUM_USD, "You need to spend more ETH!");
         addressToAmountFunded[msg.sender] += msg.value;
         funders.push(msg.sender);
     }
-
-    function getVersion() public view returns(uint256) {
-        AggregatorV3Interface priceFeed = AggregatorV3Interface(
-            0x694AA1769357215DE4FAC081bf1f309aDC325306
-        );
-        return priceFeed.version();
+    
+    function getVersion() public view returns (uint256){
+        return s_priceFeed.version();
     }
-
+    
     modifier onlyOwner {
-        // require(msg.sender == i_owner, "Sender is not owner!");
-        if (msg.sender != i_owner) {revert NotOwner();}
+        // require(msg.sender == owner);
+        if (msg.sender != i_owner) revert FundMe__NotOwner();
         _;
     }
-
+    
     function withdraw() public onlyOwner {
-        // for loop
-        // [1, 2, 3, 4] = elements
-        //  0, 1, 2, 3  = indexes
-        // (starting index; ending index; step amount)
         for (uint256 funderIndex=0; funderIndex < funders.length; funderIndex++){
             address funder = funders[funderIndex];
             addressToAmountFunded[funder] = 0;
         }
         funders = new address[](0);
-        // msg.sender = address
-        // payable(msg.sender) = payable address
-        
         // // transfer
         // payable(msg.sender).transfer(address(this).balance);
-
+        
         // // send
         // bool sendSuccess = payable(msg.sender).send(address(this).balance);
         // require(sendSuccess, "Send failed");
 
-        // // call
+        // call
         (bool callSuccess, ) = payable(msg.sender).call{value: address(this).balance}("");
         require(callSuccess, "Call failed");
     }
+    // Explainer from: https://solidity-by-example.org/fallback/
+    // Ether is sent to contract
+    //      is msg.data empty?
+    //          /   \ 
+    //         yes  no
+    //         /     \
+    //    receive()?  fallback() 
+    //     /   \ 
+    //   yes   no
+    //  /        \
+    //receive()  fallback()
 
-// //  Explainer from: https://solidity-by-example.org/fallback/
-// //     Ether is sent to contract 
-// //         is msg.data empty?
-// //             /   \
-// //            yes  no
-// //            /     \
-// //     receive()?  fallback()
-// //       /     \
-// //     yea     no
-// //     /         \
-// //   receive()   fallback()
-
-    fallback() external payable{
+    fallback() external payable {
         fund();
     }
 
-    receive() external payable{
+    receive() external payable {
         fund();
     }
 }
