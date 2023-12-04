@@ -35,7 +35,10 @@ contract FundMe {
     }
 
     function fund() public payable {
-        require(msg.value.getConversionRate() >= MINIMUM_USD, "Not enough ETH!");
+        require(
+            msg.value.getConversionRate() >= MINIMUM_USD,
+            "Not enough ETH!"
+        );
         // required(PriceConverter.getConversionRate(msg.value) >= MINUMUM_USD, "Not enough ETH!");
         addressToAmountFunded[msg.sender] += msg.value;
         funders.push(msg.sender);
