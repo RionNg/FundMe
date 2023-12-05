@@ -38,7 +38,7 @@ contract FundMe {
         funders.push(msg.sender);
     }
     
-    function getVersion() public view returns (uint256){
+    function getVersion() public view returns (uint256) {
         return s_priceFeed.version();
     }
     
